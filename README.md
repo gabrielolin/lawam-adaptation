@@ -4,24 +4,23 @@ Research code for studying adaptations of [LaWAM](https://github.com/RLinf/LaWAM
 
 ## Installation
 
-This project targets Python 3.10 and NVIDIA Blackwell GPUs (including RTX 5080) using PyTorch CUDA 12.8. Create the environment and install both packages:
+This project targets Python 3.10 and NVIDIA Blackwell GPUs (including RTX 5080) using PyTorch CUDA 12.8. Create the named Conda environment and install LaWAM plus this project:
 
 ```bash
-conda env create --prefix .conda-env --file environment.yml
-bash scripts/bootstrap_env.sh .conda-env
-conda activate "$PWD/.conda-env"
+conda env create --name lawam-adaptation --file environment.yml
+conda activate lawam-adaptation
+bash scripts/bootstrap_env.sh "$CONDA_PREFIX"
 ```
 
-`bootstrap_env.sh` installs LaWAM's upstream requirements, replaces only the PyTorch runtime with the CUDA 12.8 build required for Blackwell, compiles a matching FlashAttention release, then installs LaWAM and this project in editable mode. It does not download datasets or checkpoints. Configure their locations through environment variables or experiment configuration, never source code.
+`bootstrap_env.sh` installs LaWAM's upstream requirements into `lawam-adaptation`, replaces only the PyTorch runtime with the CUDA 12.8 build required for Blackwell, compiles a matching FlashAttention release, then installs LaWAM and this project in editable mode. It does not download datasets or checkpoints. Configure their locations through environment variables or experiment configuration, never source code.
 
 ## Verification
 
 ```bash
-python scripts/smoke_test.py
 pytest
 ```
 
-The smoke test reports the PyTorch/CUDA version, detects the GPU, and imports `starVLA` (LaWAM) plus `lawam_adaptation`.
+For one-off CUDA diagnostics, use the ignored `scratch/` directory rather than adding permanent scripts to the repository.
 
 ## Upstream provenance
 
