@@ -1,0 +1,13 @@
+name: lawam-adaptation
+channels:
+  - conda-forge
+  - nvidia
+dependencies:
+  - python=3.10
+  - pip
+  # FlashAttention is compiled locally. CUDA 12.8 has native Blackwell support.
+  - cuda-nvcc=12.8
+  - ninja
+  - packaging
+  - setuptools
+  - wheel

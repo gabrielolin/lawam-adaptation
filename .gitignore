@@ -1,1 +1,28 @@
+# Local repository guidance is supplied by the parent research workspace.
 AGENTS.md
+
+# Python and Conda environments
+.conda-env/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Generated research artifacts
+outputs/
+results/
+runs/
+checkpoints/
+wandb/
+logs/
+videos/
+tmp/
+.scratch/
+
+# Local configuration and downloaded assets
+.env
+data/
+datasets/
+weights/

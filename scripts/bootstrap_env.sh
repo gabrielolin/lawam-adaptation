@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "Usage: $0 /path/to/conda-environment" >&2
+  exit 2
+fi
+
+ENV_PREFIX="$1"
+PYTHON="$ENV_PREFIX/bin/python"
+
+if [[ ! -x "$PYTHON" ]]; then
+  echo "No Python executable at $PYTHON. Create the environment from environment.yml first." >&2
+  exit 2
+fi
+
+"$PYTHON" -m pip install --upgrade pip
+
+# Install the runtime first: packages such as accelerate otherwise resolve the
+# newest generic PyTorch from PyPI before the Blackwell-compatible build below.
+"$PYTHON" -m pip install --upgrade \
+  --index-url https://download.pytorch.org/whl/cu128 \
+  torch==2.7.1 torchvision==0.22.1
+
+# Install every upstream requirement except the runtime pair replaced below.
+# The upstream pins target PyTorch 2.6, whose published CUDA builds predate
+# Blackwell; retaining them would silently replace the CUDA 12.8 runtime.
+sed -e '/^torch==/d' -e '/^torchvision==/d' third_party/LaWAM/requirements.txt \
+  | "$PYTHON" -m pip install -r /dev/stdin
+
+# Build against the environment's CUDA 12.8 compiler and installed PyTorch.
+"$PYTHON" -m pip install flash-attn==2.8.3 --no-build-isolation
+"$PYTHON" -m pip install --no-build-isolation -e third_party/LaWAM
+"$PYTHON" -m pip install --no-build-isolation -e .[dev]
