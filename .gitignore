@@ -26,3 +26,6 @@ tmp/
 data/
 datasets/
 weights/
+
+scratch/
+../AGENTS.md
