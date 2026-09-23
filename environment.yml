@@ -11,3 +11,7 @@ dependencies:
   - packaging
   - setuptools
   - wheel
+  - pytest
+  # LaWAM's Python requirements are installed by scripts/bootstrap_env.sh
+  # after the CUDA 12.8 PyTorch runtime, so its older PyTorch pin cannot
+  # replace the Blackwell-compatible build.

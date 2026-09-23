@@ -1,5 +1,8 @@
+import os
+
 import torch.nn as nn
 import torch
+from torch.utils.checkpoint import checkpoint as gradient_checkpoint
 from typing import Optional, Tuple
 from .modules import CategorySpecificMLP
 from .pos_embs import Fixed2DPositionalEncoding
@@ -61,7 +64,9 @@ class AdaLNBlock(nn.Module):
         gate_mlp  = gate_mlp.unsqueeze(1)
 
         normed = modulate(self.norm1(x), shift_msa, scale_msa)
-        attn_out, _ = self.attn(normed, normed, normed)
+        # Attention weights are unused. Asking MultiheadAttention not to return
+        # them enables PyTorch's memory-efficient scaled-dot-product path.
+        attn_out, _ = self.attn(normed, normed, normed, need_weights=False)
         x = x + gate_msa * attn_out
 
         normed = modulate(self.norm2(x), shift_mlp, scale_mlp)
@@ -134,8 +139,17 @@ class LAMDecoder_v2(nn.Module):
 
         x = self.pos_embed(features_tokens)        # [B, K, context_dim]
 
+        checkpoint_setting = os.environ.get("LAWAM_LAM_DECODER_GRAD_CHECKPOINTING", "0").strip().lower()
+        use_gradient_checkpointing = (
+            self.training
+            and torch.is_grad_enabled()
+            and checkpoint_setting in {"1", "true", "yes", "on"}
+        )
         for layer in self.dec_layers:
-            x = layer(x, c)
+            if use_gradient_checkpointing:
+                x = gradient_checkpoint(layer, x, c, use_reentrant=False)
+            else:
+                x = layer(x, c)
 
         reconstructed_features = self.project_output(x)   # [B, K, input_dim]
         reconstructed_features = self.last_ln(reconstructed_features)

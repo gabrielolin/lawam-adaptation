@@ -174,12 +174,25 @@ def setup_optimizer_and_scheduler(model, cfg) -> Tuple[torch.optim.Optimizer, to
     """set optimizer and scheduler"""
     # initialize optimizer
     param_groups = build_param_lr_groups(model=model, cfg=cfg)
+    foreach_setting = os.environ.get("LAWAM_ADAMW_FOREACH", "auto").strip().lower()
+    if foreach_setting == "auto":
+        adamw_foreach = None
+    elif foreach_setting in {"1", "true", "yes", "on"}:
+        adamw_foreach = True
+    elif foreach_setting in {"0", "false", "no", "off"}:
+        adamw_foreach = False
+    else:
+        raise ValueError(
+            "LAWAM_ADAMW_FOREACH must be 'auto', 'true', or 'false'; "
+            f"got {foreach_setting!r}"
+        )
     optimizer = torch.optim.AdamW(
         param_groups,
         lr=cfg.trainer.learning_rate.base,
         betas=tuple(cfg.trainer.optimizer.betas),
         weight_decay=cfg.trainer.optimizer.weight_decay,
         eps=cfg.trainer.optimizer.eps,
+        foreach=adamw_foreach,
     )
 
     # print optimizer group info
@@ -279,15 +292,16 @@ class VLATrainer(TrainerUtils):
             return
         if self.accelerator.is_main_process:
             try:
-                # Force offline logging whenever wandb is enabled.
-                os.environ["WANDB_MODE"] = "offline"
+                # Preserve offline as the upstream-safe default, but allow
+                # launchers to opt into online logging through the environment.
+                wandb_mode = os.environ.get("WANDB_MODE", "offline").strip().lower()
                 wandb.init(
                     name=Path(self.config.output_dir).name,
                     dir=os.path.join(self.config.output_dir, "wandb"),
                     project=self.config.wandb_project,
                     entity=self.config.wandb_entity,
                     group="vla-train",
-                    mode="offline",
+                    mode=wandb_mode,
                 )
             except Exception as e:
                 self.use_wandb = False
